@@ -1,2 +1,4 @@
 node_modules
 
+.coda.json
+.coda-credentials.json
