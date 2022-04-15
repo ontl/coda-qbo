@@ -113,7 +113,7 @@ export const CustomerSchema = coda.makeObjectSchema({
   identity: {
     name: "Customer",
   },
-  featured: ["billingAddress", "isAJob"],
+  featured: ["email", "balance", "active"],
   properties: {
     customerId: { type: coda.ValueType.String, required: true, fromKey: "Id" },
     displayName: {
@@ -169,7 +169,7 @@ export const InvoiceSchema = coda.makeObjectSchema({
   identity: {
     name: "Invoice",
   },
-  featured: ["customer", "invoiceDate", "dueDate"],
+  featured: ["customer", "dueDate", "totalAmount", "paid"],
   properties: {
     invoiceId: { type: coda.ValueType.String, fromKey: "Id", required: true },
     invoiceNumber: {
@@ -203,7 +203,7 @@ export const InvoiceSchema = coda.makeObjectSchema({
       codaType: coda.ValueHintType.Currency,
       fromKey: "Deposit",
     },
-    // TODO: Generate these objects
+    paid: { type: coda.ValueType.Boolean }, // Synthetic property we'll generate
     lineItems: {
       type: coda.ValueType.Array,
       items: LineItemSchema,

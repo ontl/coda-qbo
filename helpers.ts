@@ -4,10 +4,9 @@ import * as types from "./types";
 
 export async function queryApi(
   context: coda.ExecutionContext,
-  query: string,
-  realmId?: string
+  realmId: string,
+  query: string
 ) {
-  realmId = constants.REALM_ID;
   let url = coda.withQueryParams(`${constants.BASE_URL}${realmId}/query`, {
     ...constants.QUERY_PARAMS,
     query: query,
@@ -15,11 +14,38 @@ export async function queryApi(
   const response = await context.fetcher.fetch({
     url: url,
     method: "GET",
-    headers: {
-      Accept: "application/json",
-    },
+    headers: { Accept: "application/json" },
   });
   return response.body.QueryResponse;
+}
+
+export function buildQuery(
+  baseQuery: string,
+  startPosition: number,
+  where?: string,
+  maxResults: number = constants.PAGE_SIZE
+) {
+  let whereElement = where ? `where ${where} ` : "";
+  return `${baseQuery} ${whereElement}startposition ${startPosition} maxresults ${maxResults}`;
+}
+
+export async function getApiEndpoint(
+  context: coda.ExecutionContext,
+  realmId: string,
+  endpoint: string
+) {
+  let url = coda.withQueryParams(
+    `${constants.BASE_URL}${realmId}/${endpoint}`,
+    {
+      ...constants.QUERY_PARAMS,
+    }
+  );
+  const response = await context.fetcher.fetch({
+    url: url,
+    method: "GET",
+    headers: { Accept: "application/json" },
+  });
+  return response.body;
 }
 
 export function concatenateAddress(address: types.addressApiResponse) {

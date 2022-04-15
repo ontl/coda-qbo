@@ -2,11 +2,17 @@ import * as coda from "@codahq/packs-sdk";
 import * as constants from "./constants";
 import * as helpers from "./helpers";
 
-export async function syncCustomers(context: coda.SyncExecutionContext) {
+export async function syncCustomers(
+  context: coda.SyncExecutionContext,
+  realmId: string,
+  activeOnly: boolean
+) {
   let startPosition: number =
     (context.sync.continuation?.startPosition as number) || 1;
-  let query = `select * from Customer startposition ${startPosition} maxresults ${constants.PAGE_SIZE}`;
-  let response = await helpers.queryApi(context, query);
+  // Generate a query to filter for active Customers, if requested (otherwise just leave blank)
+  let activeOnlyQuery: string = activeOnly ? "where Status = Active " : "";
+  let query = `select * from Customer startposition ${startPosition} ${activeOnlyQuery}maxresults ${constants.PAGE_SIZE}`;
+  let response = await helpers.queryApi(context, realmId, query);
   let customers = response.Customer;
 
   // Massage the data into the sync table schema we've defined.
@@ -44,12 +50,29 @@ export async function syncCustomers(context: coda.SyncExecutionContext) {
   };
 }
 
-export async function syncInvoices(context: coda.SyncExecutionContext) {
+export async function syncInvoices(
+  context: coda.SyncExecutionContext,
+  realmId: string,
+  dateRange: Date[]
+) {
   let startPosition: number =
     (context.sync.continuation?.startPosition as number) || 1;
-  let query = `select * from Invoice startposition ${startPosition} maxresults ${constants.PAGE_SIZE}`;
-  let response = await helpers.queryApi(context, query);
-  let invoices = response.Invoice;
+  let where = dateRange
+    ? `TxnDate >= '${dateRange[0].toISOString()}' and TxnDate <= '${dateRange[1].toISOString()}'`
+    : null;
+  let query = helpers.buildQuery(`select * from Invoice`, startPosition, where);
+
+  // get the invoices, as well as the currency preferences for the company
+  let [invoiceResponse, preferences] = await Promise.all([
+    helpers.queryApi(context, realmId, query),
+    helpers.getApiEndpoint(context, realmId, "preferences"),
+  ]);
+  let invoices = invoiceResponse.Invoice;
+
+  // Set up currency (fall back to USD if none detected)
+  let currencyCode =
+    preferences.Preferences?.CurrencyPrefs?.HomeCurrency?.value || "USD";
+  let currency = constants.CURRENCIES[currencyCode];
 
   // Massage the data into the sync table schema we've defined.
   for (let invoice of invoices) {
@@ -62,22 +85,35 @@ export async function syncInvoices(context: coda.SyncExecutionContext) {
     if (invoice.BillAddr)
       invoice.billingAddress = helpers.objectifyAddress(invoice.BillAddr);
     invoice.tax = invoice.TxnTaxDetail?.TotalTax;
+    // An invoice is considered paid if it has a non-zero total amount
+    // (i.e. it's not just a blank invoice), and the balance is zero.
+    invoice.paid = invoice.TotalAmt > 0 && (invoice.Balance as number) === 0;
     // Find subtotal
-    // TODO: Make sure this is safe; if there can be multiple subtotals this will be wrong
-    invoice.subtotal = invoice.Line?.find(
+    invoice.subtotal = invoice.Line?.filter(
       (line) => line.DetailType === "SubTotalLineDetail"
-    )?.Amount;
+    )?.reduce((accumulator, line) => accumulator + line.Amount, 0);
     // Associate to customer
     invoice.customer = {
       customerId: invoice.CustomerRef.value,
       displayName: invoice.CustomerRef.name,
     };
+    // Get invoice currency, if there is one. If not, fall back to company currency
+    let invoiceCurrency = invoice.CurrencyRef
+      ? constants.CURRENCIES[invoice.CurrencyRef.value]
+      : currency;
     // Format line items
     invoice.lineItems = [];
     for (let lineItem of invoice.Line) {
-      // only add it if it's a sales line item (not a subtotal line)
+      // only add it if it's a sales line item (not a subtotal, group or discount line)
       if (lineItem.DetailType === "SalesItemLineDetail") {
-        lineItem.summary = `${lineItem.SalesItemLineDetail?.Qty}x ${lineItem.Description}: ${lineItem.Amount}`;
+        // generate a nice summary that we'll use as the display value
+        lineItem.summary =
+          lineItem.SalesItemLineDetail?.Qty +
+          "x " +
+          lineItem.Description +
+          ": " +
+          (invoiceCurrency ? invoiceCurrency.symbol : "") +
+          lineItem.Amount.toFixed(invoiceCurrency?.decimals || 2);
         lineItem.quantity = lineItem.SalesItemLineDetail?.Qty;
         lineItem.unitPrice = lineItem.SalesItemLineDetail?.UnitPrice;
         lineItem.item = {
