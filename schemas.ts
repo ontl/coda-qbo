@@ -204,11 +204,14 @@ export const InvoiceSchema = coda.makeObjectSchema({
       fromKey: "Deposit",
     },
     paid: { type: coda.ValueType.Boolean }, // Synthetic property we'll generate
+    pdf: {
+      type: coda.ValueType.String,
+      codaType: coda.ValueHintType.Attachment,
+    },
     lineItems: {
       type: coda.ValueType.Array,
       items: LineItemSchema,
     },
-    // TODO: Pull out of subtotal line item
     subtotal: {
       type: coda.ValueType.Number,
       codaType: coda.ValueHintType.Currency,
@@ -219,7 +222,6 @@ export const InvoiceSchema = coda.makeObjectSchema({
     },
     customerMemo: { type: coda.ValueType.String },
     printStatus: { type: coda.ValueType.String, fromKey: "PrintStatus" },
-    // TODO: Enrich from acccount's sales term endpoint?
     salesTerms: { type: coda.ValueType.String },
     billingEmail: { type: coda.ValueType.String },
     createdAt: {

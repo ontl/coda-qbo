@@ -36,9 +36,7 @@ export async function getApiEndpoint(
 ) {
   let url = coda.withQueryParams(
     `${constants.BASE_URL}${realmId}/${endpoint}`,
-    {
-      ...constants.QUERY_PARAMS,
-    }
+    { ...constants.QUERY_PARAMS }
   );
   const response = await context.fetcher.fetch({
     url: url,

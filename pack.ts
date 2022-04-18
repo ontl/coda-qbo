@@ -61,32 +61,39 @@ pack.addSyncTable({
         type: coda.ParameterType.DateArray,
         optional: true,
       }),
+      coda.makeParameter({
+        name: "IncludePDFs",
+        type: coda.ParameterType.Boolean,
+        description: "Add a PDF of each invoice to the table (slower)",
+        optional: true,
+      }),
     ],
-    execute: async function ([CompanyId, DateRange], context) {
-      return formulas.syncInvoices(context, CompanyId, DateRange);
+    execute: async function ([CompanyId, DateRange, IncludePDFs], context) {
+      return formulas.syncInvoices(context, CompanyId, DateRange, IncludePDFs);
     },
   },
 });
 
-// pack.addFormula({
-//   name: "InvoicePDF",
-//   description: "Download a PDF of an Invoice",
-//   parameters: [
-//     coda.makeParameter({
-//       name: "InvoiceId",
-//       type: coda.ParameterType.String,
-//       description: "The ID of the Invoice to download",
-//     }),
-//     coda.makeParameter({
-//       name: "realmId",
-//       type: coda.ParameterType.String,
-//       description: "Your QuickBooks Online company ID (only needed in beta)",
-//       optional: true,
-//     }),
-//   ],
-//   resultType: coda.ValueType.String,
-//   codaType: coda.ValueHintType.Attachment,
-//   execute: async function (["invoiceId", "realmId"], context) {
-
-//   },
-// })
+pack.addFormula({
+  name: "InvoicePDF",
+  description:
+    "Get a temporary link to a PDF of an Invoice. Hint: use a button with formula OpenWindow(InvoicePDF(...))",
+  parameters: [
+    coda.makeParameter({
+      name: "InvoiceId",
+      type: coda.ParameterType.String,
+      description:
+        "The ID of the Invoice to download (note: this is not the Invoice number)",
+    }),
+    coda.makeParameter({
+      name: "CompanyId",
+      type: coda.ParameterType.String,
+      description: "Your QuickBooks Online company ID (only needed in beta)",
+      optional: false,
+    }),
+  ],
+  resultType: coda.ValueType.String,
+  execute: async function ([InvoiceId, CompanyId], context) {
+    return formulas.getInvoicePDF(context, InvoiceId, CompanyId);
+  },
+});
