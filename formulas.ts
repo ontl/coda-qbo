@@ -53,8 +53,7 @@ export async function syncCustomers(
 export async function syncInvoices(
   context: coda.SyncExecutionContext,
   realmId: string,
-  dateRange: Date[],
-  includePdfs: boolean
+  dateRange: Date[]
 ) {
   let startPosition: number =
     (context.sync.continuation?.startPosition as number) || 1;
@@ -70,21 +69,13 @@ export async function syncInvoices(
   ]);
   let invoices = invoiceResponse.Invoice;
 
-  if (includePdfs) {
-    const pdfs = await Promise.all(
-      invoices.map((invoice) =>
-        getInvoicePDF(
-          context,
-          invoice.Id,
-          realmId,
-          60 * 10 // cacheTtlSecs - in a sync table, let's have it cache somewhat aggressively
-        )
-      )
-    );
-    invoices.forEach((invoice, index) => {
-      invoice.pdf = pdfs[index];
-    });
-  }
+  // get the PDF versions of each invoice
+  const pdfs = await Promise.all(
+    invoices.map((invoice) => getInvoicePDF(context, invoice.Id, realmId))
+  );
+  invoices.forEach((invoice, index) => {
+    invoice.pdf = pdfs[index];
+  });
 
   // Set up currency (fall back to USD if none detected)
   let currencyCode =
@@ -156,8 +147,7 @@ export async function syncInvoices(
 export async function getInvoicePDF(
   context: coda.ExecutionContext,
   invoiceId: string,
-  realmId: string,
-  cachTtlSecs: number = 60
+  realmId: string
 ) {
   let url = coda.withQueryParams(
     `${constants.BASE_URL}${realmId}/invoice/${invoiceId}/pdf`,
@@ -167,14 +157,13 @@ export async function getInvoicePDF(
     url: url,
     method: "GET",
     isBinaryResponse: true, // prevents Coda from trying to parse the response, returning a buffer instead
-    cacheTtlSecs: cachTtlSecs, // cache in sync tables, but not when calling formula directly
   });
   let temporaryFileUrl = await context.temporaryBlobStorage.storeBlob(
     response.body, // response.body is a buffer
     "application/pdf"
   );
-  // Note that there's also a simpler way to do this, if we didn't care about specifying
-  // cacheTtlSecs. We could skip the whole context.fetcher.fetch and just blob store the URL
+  // Note that there's also a simpler way to do this, if we didn't need to specify the "application/pdf"
+  // content type. We could skip the whole context.fetcher.fetch and just blob store the URL
   // directly (this storeUrl() method stil includes the auth headers, like fetcher.fetch()):
   // let temporaryFileUrl = await context.temporaryBlobStorage.storeUrl(url);
   return temporaryFileUrl;
