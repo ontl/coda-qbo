@@ -53,7 +53,8 @@ export async function syncCustomers(
 export async function syncInvoices(
   context: coda.SyncExecutionContext,
   realmId: string,
-  dateRange: Date[]
+  dateRange?: Date[],
+  IncludePdfs?: boolean
 ) {
   let startPosition: number =
     (context.sync.continuation?.startPosition as number) || 1;
@@ -69,66 +70,70 @@ export async function syncInvoices(
   ]);
   let invoices = invoiceResponse.Invoice;
 
-  // get the PDF versions of each invoice
-  const pdfs = await Promise.all(
-    invoices.map((invoice) => getInvoicePDF(context, invoice.Id, realmId))
-  );
-  invoices.forEach((invoice, index) => {
-    invoice.pdf = pdfs[index];
-  });
+  if (invoices?.length) {
+    // get the PDF versions of each invoice
+    if (IncludePdfs) {
+      const pdfs = await Promise.all(
+        invoices.map((invoice) => getInvoicePDF(context, invoice.Id, realmId))
+      );
+      invoices.forEach((invoice, index) => {
+        invoice.pdf = pdfs[index];
+      });
+    }
 
-  // Set up currency (fall back to USD if none detected)
-  let currencyCode =
-    preferences.Preferences?.CurrencyPrefs?.HomeCurrency?.value || "USD";
-  let currency = constants.CURRENCIES[currencyCode];
+    // Set up currency (fall back to USD if none detected)
+    let currencyCode =
+      preferences.Preferences?.CurrencyPrefs?.HomeCurrency?.value || "USD";
+    let currency = constants.CURRENCIES[currencyCode];
 
-  // Massage the data into the sync table schema we've defined.
-  for (let invoice of invoices) {
-    invoice.billingEmail = invoice.BillEmail?.Address;
-    invoice.createdAt = invoice.MetaData?.CreateTime;
-    invoice.updatedAt = invoice.MetaData?.LastUpdatedTime;
-    invoice.customerMemo = invoice.CustomerMemo?.value;
-    if (invoice.ShipAddr)
-      invoice.shippingAddress = helpers.objectifyAddress(invoice.ShipAddr);
-    if (invoice.BillAddr)
-      invoice.billingAddress = helpers.objectifyAddress(invoice.BillAddr);
-    invoice.tax = invoice.TxnTaxDetail?.TotalTax;
-    // An invoice is considered paid if it has a non-zero total amount
-    // (i.e. it's not just a blank invoice), and the balance is zero.
-    invoice.paid = invoice.TotalAmt > 0 && (invoice.Balance as number) === 0;
-    // Find subtotal
-    invoice.subtotal = invoice.Line?.filter(
-      (line) => line.DetailType === "SubTotalLineDetail"
-    )?.reduce((accumulator, line) => accumulator + line.Amount, 0);
-    // Associate to customer
-    invoice.customer = {
-      customerId: invoice.CustomerRef.value,
-      displayName: invoice.CustomerRef.name,
-    };
-    // Get invoice currency, if there is one. If not, fall back to company currency
-    let invoiceCurrency = invoice.CurrencyRef
-      ? constants.CURRENCIES[invoice.CurrencyRef.value]
-      : currency;
-    // Format line items
-    invoice.lineItems = [];
-    for (let lineItem of invoice.Line) {
-      // only add it if it's a sales line item (not a subtotal, group or discount line)
-      if (lineItem.DetailType === "SalesItemLineDetail") {
-        // generate a nice summary that we'll use as the display value
-        lineItem.summary =
-          lineItem.SalesItemLineDetail?.Qty +
-          "x " +
-          lineItem.Description +
-          ": " +
-          (invoiceCurrency ? invoiceCurrency.symbol : "") +
-          lineItem.Amount.toFixed(invoiceCurrency?.decimals || 2);
-        lineItem.quantity = lineItem.SalesItemLineDetail?.Qty;
-        lineItem.unitPrice = lineItem.SalesItemLineDetail?.UnitPrice;
-        lineItem.item = {
-          name: lineItem.SalesItemLineDetail?.ItemRef?.name,
-          itemId: lineItem.SalesItemLineDetail?.ItemRef?.value,
-        };
-        invoice.lineItems.push(lineItem);
+    // Massage the data into the sync table schema we've defined.
+    for (let invoice of invoices) {
+      invoice.billingEmail = invoice.BillEmail?.Address;
+      invoice.createdAt = invoice.MetaData?.CreateTime;
+      invoice.updatedAt = invoice.MetaData?.LastUpdatedTime;
+      invoice.customerMemo = invoice.CustomerMemo?.value;
+      if (invoice.ShipAddr)
+        invoice.shippingAddress = helpers.objectifyAddress(invoice.ShipAddr);
+      if (invoice.BillAddr)
+        invoice.billingAddress = helpers.objectifyAddress(invoice.BillAddr);
+      invoice.tax = invoice.TxnTaxDetail?.TotalTax;
+      // An invoice is considered paid if it has a non-zero total amount
+      // (i.e. it's not just a blank invoice), and the balance is zero.
+      invoice.paid = invoice.TotalAmt > 0 && (invoice.Balance as number) === 0;
+      // Find subtotal
+      invoice.subtotal = invoice.Line?.filter(
+        (line) => line.DetailType === "SubTotalLineDetail"
+      )?.reduce((accumulator, line) => accumulator + line.Amount, 0);
+      // Associate to customer
+      invoice.customer = {
+        customerId: invoice.CustomerRef.value,
+        displayName: invoice.CustomerRef.name,
+      };
+      // Get invoice currency, if there is one. If not, fall back to company currency
+      let invoiceCurrency = invoice.CurrencyRef
+        ? constants.CURRENCIES[invoice.CurrencyRef.value]
+        : currency;
+      // Format line items
+      invoice.lineItems = [];
+      for (let lineItem of invoice.Line) {
+        // only add it if it's a sales line item (not a subtotal, group or discount line)
+        if (lineItem.DetailType === "SalesItemLineDetail") {
+          // generate a nice summary that we'll use as the display value
+          lineItem.summary =
+            lineItem.SalesItemLineDetail?.Qty +
+            "x " +
+            lineItem.Description +
+            ": " +
+            (invoiceCurrency ? invoiceCurrency.symbol : "") +
+            lineItem.Amount.toFixed(invoiceCurrency?.decimals || 2);
+          lineItem.quantity = lineItem.SalesItemLineDetail?.Qty;
+          lineItem.unitPrice = lineItem.SalesItemLineDetail?.UnitPrice;
+          lineItem.item = {
+            name: lineItem.SalesItemLineDetail?.ItemRef?.name,
+            itemId: lineItem.SalesItemLineDetail?.ItemRef?.value,
+          };
+          invoice.lineItems.push(lineItem);
+        }
       }
     }
   }

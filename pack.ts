@@ -61,9 +61,15 @@ pack.addSyncTable({
         type: coda.ParameterType.DateArray,
         optional: true,
       }),
+      coda.makeParameter({
+        name: "IncludePdfs",
+        description: "Include PDFs of each invoices (makes sync slower)",
+        type: coda.ParameterType.Boolean,
+        optional: true,
+      }),
     ],
-    execute: async function ([CompanyId, DateRange], context) {
-      return formulas.syncInvoices(context, CompanyId, DateRange);
+    execute: async function ([CompanyId, DateRange, IncludePdfs], context) {
+      return formulas.syncInvoices(context, CompanyId, DateRange, IncludePdfs);
     },
   },
 });
