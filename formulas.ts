@@ -9,9 +9,12 @@ export async function syncCustomers(
 ) {
   let startPosition: number =
     (context.sync.continuation?.startPosition as number) || 1;
-  // Generate a query to filter for active Customers, if requested (otherwise just leave blank)
-  let activeOnlyQuery: string = activeOnly ? "where Active = True " : "";
-  let query = `select * from Customer ${activeOnlyQuery}startposition ${startPosition} maxresults ${constants.PAGE_SIZE}`;
+  let query = helpers.buildQuery(
+    "select * from Customer",
+    startPosition,
+    activeOnly ? "Active = True" : "", // filter for active customers only, if requested
+    constants.PAGE_SIZE
+  );
   let response = await helpers.queryApi(context, realmId, query);
   let customers = response.Customer;
 
@@ -54,16 +57,20 @@ export async function syncInvoices(
   context: coda.SyncExecutionContext,
   realmId: string,
   dateRange?: Date[],
-  IncludePdfs?: boolean
+  includePdfs?: boolean
 ) {
+  // If we're including PDFs, we need to take it easy on the page size.
+  let pageSize = includePdfs ? 20 : constants.PAGE_SIZE;
+  // If there's a start position from a previous continuation, use that; otherwise start at the beginning.
   let startPosition: number =
     (context.sync.continuation?.startPosition as number) || 1;
-  let where = dateRange
+  // If we have a date range and it's valid, filter to that range.
+  let where = helpers.dateRangeIsValid(dateRange)
     ? `TxnDate >= '${dateRange[0].toISOString()}' and TxnDate <= '${dateRange[1].toISOString()}'`
     : null;
   let query = helpers.buildQuery(`select * from Invoice`, startPosition, where);
 
-  // get the invoices, as well as the currency preferences for the company
+  // Get the invoices, as well as the currency preferences for the company
   let [invoiceResponse, preferences] = await Promise.all([
     helpers.queryApi(context, realmId, query),
     helpers.getApiEndpoint(context, realmId, "preferences"),
@@ -71,8 +78,8 @@ export async function syncInvoices(
   let invoices = invoiceResponse.Invoice;
 
   if (invoices?.length) {
-    // get the PDF versions of each invoice
-    if (IncludePdfs) {
+    // Get the PDF versions of each invoice
+    if (includePdfs) {
       const pdfs = await Promise.all(
         invoices.map((invoice) => getInvoicePDF(context, invoice.Id, realmId))
       );
@@ -138,9 +145,9 @@ export async function syncInvoices(
     }
   }
   let nextContinuation = undefined;
-  if (invoices?.length === constants.PAGE_SIZE) {
+  if (invoices?.length === pageSize) {
     nextContinuation = {
-      startPosition: startPosition + constants.PAGE_SIZE,
+      startPosition: startPosition + pageSize,
     };
   }
   return {

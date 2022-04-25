@@ -22,7 +22,7 @@ export async function queryApi(
 export function buildQuery(
   baseQuery: string,
   startPosition: number,
-  where?: string,
+  where?: string, // WITHOUT the word "where"
   maxResults: number = constants.PAGE_SIZE
 ) {
   let whereElement = where ? `where ${where} ` : "";
@@ -65,4 +65,18 @@ export function objectifyAddress(address: types.addressApiResponse) {
     ...address,
     summary: concatenateAddress(address),
   };
+}
+
+export function dateRangeIsValid(dateRange: Date[]) {
+  // The main purpose of this function is that when users choose "Everything" in the date range
+  // selector, Coda sends a range from year 0000 to year 4000. QBO chokes on these dates, throwing
+  // a 400 error. We use this function to flag if dates are outside a reasonable range of 1900-2100.
+  if (
+    !dateRange ||
+    dateRange.length !== 2 ||
+    dateRange[0].getFullYear() < 1900 ||
+    dateRange[1].getFullYear() > 2100
+  )
+    return false;
+  return true;
 }
