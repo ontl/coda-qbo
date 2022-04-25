@@ -10,8 +10,8 @@ export async function syncCustomers(
   let startPosition: number =
     (context.sync.continuation?.startPosition as number) || 1;
   // Generate a query to filter for active Customers, if requested (otherwise just leave blank)
-  let activeOnlyQuery: string = activeOnly ? "where Status = Active " : "";
-  let query = `select * from Customer startposition ${startPosition} ${activeOnlyQuery}maxresults ${constants.PAGE_SIZE}`;
+  let activeOnlyQuery: string = activeOnly ? "where Active = True " : "";
+  let query = `select * from Customer ${activeOnlyQuery}startposition ${startPosition} maxresults ${constants.PAGE_SIZE}`;
   let response = await helpers.queryApi(context, realmId, query);
   let customers = response.Customer;
 
