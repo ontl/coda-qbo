@@ -113,7 +113,7 @@ export const CustomerSchema = coda.makeObjectSchema({
   identity: {
     name: "Customer",
   },
-  featured: ["email", "balance", "active"],
+  featured: ["email", "balance"],
   properties: {
     customerId: { type: coda.ValueType.String, required: true, fromKey: "Id" },
     displayName: {
@@ -136,8 +136,8 @@ export const CustomerSchema = coda.makeObjectSchema({
       fromKey: "PrintOnCheckName",
     },
     currency: { type: coda.ValueType.String },
-    isAProject: { type: coda.ValueType.Boolean, fromKey: "IsProject" },
-    isAJob: { type: coda.ValueType.Boolean, fromKey: "Job" }, // TODO: Figure out what they mean by this
+    isAProject: { type: coda.ValueType.Boolean, fromKey: "IsProject" }, // TODO: Figure out what they mean by this
+    isAJob: { type: coda.ValueType.Boolean, fromKey: "Job" },
     billWithParent: { type: coda.ValueType.Boolean, fromKey: "BillWithParent" },
     email: { type: coda.ValueType.String },
     phone: {
@@ -169,7 +169,7 @@ export const InvoiceSchema = coda.makeObjectSchema({
   identity: {
     name: "Invoice",
   },
-  featured: ["customer", "dueDate", "totalAmount", "paid"],
+  featured: ["customer", "invoiceDate", "dueDate", "totalAmount", "paid"],
   properties: {
     invoiceId: { type: coda.ValueType.String, fromKey: "Id", required: true },
     invoiceNumber: {

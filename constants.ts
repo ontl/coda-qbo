@@ -1,7 +1,7 @@
 // Sandbox URL:
-export const BASE_URL = "https://sandbox-quickbooks.api.intuit.com/v3/company/";
+// export const BASE_URL = "https://sandbox-quickbooks.api.intuit.com/v3/company/";
 // Production URL:
-// export const BASE_URL = "https://quickbooks.api.intuit.com/v3/company/";
+export const BASE_URL = "https://quickbooks.api.intuit.com/v3/company/";
 
 // Configuration & tuning for the pack
 export const QUERY_PARAMS = { minorversion: 63 };
