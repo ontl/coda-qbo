@@ -68,7 +68,12 @@ export async function syncInvoices(
   let where = helpers.dateRangeIsValid(dateRange)
     ? `TxnDate >= '${dateRange[0].toISOString()}' and TxnDate <= '${dateRange[1].toISOString()}'`
     : null;
-  let query = helpers.buildQuery(`select * from Invoice`, startPosition, where);
+  let query = helpers.buildQuery(
+    `select * from Invoice`,
+    startPosition,
+    where,
+    pageSize
+  );
 
   // Get the invoices, as well as the currency preferences for the company
   let [invoiceResponse, preferences] = await Promise.all([
@@ -80,12 +85,16 @@ export async function syncInvoices(
   if (invoices?.length) {
     // Get the PDF versions of each invoice
     if (includePdfs) {
-      const pdfs = await Promise.all(
-        invoices.map((invoice) => getInvoicePDF(context, invoice.Id, realmId))
-      );
-      invoices.forEach((invoice, index) => {
-        invoice.pdf = pdfs[index];
-      });
+      try {
+        const pdfs = await Promise.all(
+          invoices.map((invoice) => getInvoicePDF(context, invoice.Id, realmId))
+        );
+        invoices.forEach((invoice, index) => {
+          invoice.pdf = pdfs[index];
+        });
+      } catch {
+        console.log("Failed to get invoice PDFs");
+      }
     }
 
     // Set up currency (fall back to USD if none detected)

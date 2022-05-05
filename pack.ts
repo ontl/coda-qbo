@@ -59,7 +59,6 @@ pack.addSyncTable({
         name: "DateRange",
         description: "Only sync Invoices dated within this range",
         type: coda.ParameterType.DateArray,
-        optional: true,
       }),
       coda.makeParameter({
         name: "IncludePdfs",
