@@ -7,10 +7,8 @@ import * as coda from "@codahq/packs-sdk";
 export const LineItemSchema = coda.makeObjectSchema({
   name: "LineItem",
   type: coda.ValueType.Object,
-  primary: "summary",
-  identity: {
-    name: "LineItem",
-  },
+  displayProperty: "summary",
+  identityName: "LineItem",
   properties: {
     summary: { type: coda.ValueType.String },
     lineItemId: { type: coda.ValueType.Number, fromKey: "Id" },
@@ -28,7 +26,7 @@ export const LineItemSchema = coda.makeObjectSchema({
     },
     item: {
       type: coda.ValueType.Object,
-      primary: "name",
+      displayProperty: "name",
       properties: {
         name: { type: coda.ValueType.String },
         itemId: { type: coda.ValueType.Number },
@@ -41,10 +39,8 @@ export const LineItemSchema = coda.makeObjectSchema({
 export const physicalAddressSchema = coda.makeObjectSchema({
   name: "PhysicalAddress",
   type: coda.ValueType.Object,
-  primary: "summary",
-  identity: {
-    name: "PhysicalAddress",
-  },
+  displayProperty: "summary",
+  identityName: "PhysicalAddress",
   properties: {
     summary: { type: coda.ValueType.String },
     line1: { type: coda.ValueType.String, fromKey: "Line1" },
@@ -95,8 +91,8 @@ const CustomerReferenceSchema = coda.makeObjectSchema({
     displayName: { type: coda.ValueType.String, required: true },
     customerId: { type: coda.ValueType.String, required: true },
   },
-  primary: "displayName",
-  id: "customerId",
+  displayProperty: "displayName",
+  idProperty: "customerId",
   identity: {
     name: "Customer",
   },
@@ -108,12 +104,10 @@ const CustomerReferenceSchema = coda.makeObjectSchema({
 
 export const CustomerSchema = coda.makeObjectSchema({
   type: coda.ValueType.Object,
-  primary: "displayName",
-  id: "customerId",
-  identity: {
-    name: "Customer",
-  },
-  featured: ["email", "balance"],
+  displayProperty: "displayName",
+  idProperty: "customerId",
+  identityName: "Customer",
+  featuredProperties: ["email", "balance"],
   properties: {
     customerId: { type: coda.ValueType.String, required: true, fromKey: "Id" },
     displayName: {
@@ -164,12 +158,16 @@ export const CustomerSchema = coda.makeObjectSchema({
 
 export const InvoiceSchema = coda.makeObjectSchema({
   type: coda.ValueType.Object,
-  primary: "invoiceNumber",
-  id: "invoiceId",
-  identity: {
-    name: "Invoice",
-  },
-  featured: ["customer", "invoiceDate", "dueDate", "totalAmount", "paid"],
+  displayProperty: "invoiceNumber",
+  idProperty: "invoiceId",
+  identityName: "Invoice",
+  featuredProperties: [
+    "customer",
+    "invoiceDate",
+    "dueDate",
+    "totalAmount",
+    "paid",
+  ],
   properties: {
     invoiceId: { type: coda.ValueType.String, fromKey: "Id", required: true },
     invoiceNumber: {
