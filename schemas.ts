@@ -123,8 +123,8 @@ export const CustomerSchema = coda.makeObjectSchema({
     taxable: { type: coda.ValueType.Boolean, fromKey: "Taxable" },
     active: { type: coda.ValueType.Boolean, fromKey: "Active" },
     companyName: { type: coda.ValueType.String, fromKey: "CompanyName" },
-    firstName: { type: coda.ValueType.String, fromKey: "FirstName" },
-    lastName: { type: coda.ValueType.String, fromKey: "LastName" },
+    firstName: { type: coda.ValueType.String, fromKey: "GivenName" },
+    lastName: { type: coda.ValueType.String, fromKey: "FamilyName" },
     printOnCheckName: {
       type: coda.ValueType.String,
       fromKey: "PrintOnCheckName",
@@ -134,10 +134,7 @@ export const CustomerSchema = coda.makeObjectSchema({
     isAJob: { type: coda.ValueType.Boolean, fromKey: "Job" },
     billWithParent: { type: coda.ValueType.Boolean, fromKey: "BillWithParent" },
     email: { type: coda.ValueType.String },
-    phone: {
-      type: coda.ValueType.String,
-      fromKey: "PrimaryPhone.FreeFormNumber",
-    },
+    phone: { type: coda.ValueType.String },
     createdAt: {
       type: coda.ValueType.String,
       codaType: coda.ValueHintType.DateTime,
